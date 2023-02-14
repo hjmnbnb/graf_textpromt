@@ -75,13 +75,6 @@ if __name__ == '__main__':
         description='Train a GAN with different regularization strategies.'
     )
     parser.add_argument('config', type=str, help='Path to config file.')
-    parser.add_argument('--fid_kid', action='store_true', help='Evaluate FID and KID.')
-    parser.add_argument('--rotation_elevation', action='store_true', help='Generate videos with changing camera pose.')
-    parser.add_argument('--shape_appearance', action='store_true',
-                        help='Create grid image showing shape/appearance variation.')
-    parser.add_argument('--pretrained', action='store_true', help='Load pretrained model.')
-    parser.add_argument('--reconstruction', action='store_true',
-                        help='Generate images and run COLMAP for 3D reconstruction.')
 
     args, unknown = parser.parse_known_args()
     config = load_config(args.config, 'configs/default.yaml')
@@ -97,9 +90,7 @@ if __name__ == '__main__':
     checkpoint_dir = path.join(out_dir, 'chkpts')
     eval_dir = os.path.join(out_dir, 'eval')
     os.makedirs(eval_dir, exist_ok=True)
-    fid_kid = int(args.fid_kid)
 
-    # config['training']['nworkers'] = 12
 
     # Logger
     checkpoint_io = CheckpointIO(
@@ -119,13 +110,6 @@ if __name__ == '__main__':
     print(train_dataset, hwfr, render_poses.shape)
 
     val_dataset = train_dataset  # evaluate on training dataset for GANs
-    if args.fid_kid:
-        val_loader = torch.utils.data.DataLoader(
-            val_dataset,
-            batch_size=batch_size,
-            num_workers=config['training']['nworkers'],
-            shuffle=True, pin_memory=False, sampler=None, drop_last=False  # enable shuffle for fid/kid computation
-        )
 
     # Create models
     generator, _ = build_models(config, disc=False)
@@ -148,7 +132,7 @@ if __name__ == '__main__':
     model_file = config_pretrained[config['data']['type']][config['data']['imsize']]
 
 
-    # Distributions 获得符合概率分布的随机的y与z的
+    # Distributions 获得符合概率分布的随机的y与z的采样函数
     ydist = get_ydist(1, device=device)  # Dummy to keep GAN training structure in tact
     y = torch.zeros(batch_size)  # Dummy to keep GAN training structure in tact
     zdist = get_zdist(config['z_dist']['type'], config['z_dist']['dim'],
@@ -186,9 +170,6 @@ if __name__ == '__main__':
                                                                                                  "a orange car",
          "a gray car", "a black car"]).to(device)
 
-    # print(text_promts_features)
-    # print(type(text_promts_features))
-
     # sample from mean radius
     radius_orig = generator_test.radius
     if isinstance(radius_orig, tuple):
@@ -217,30 +198,17 @@ if __name__ == '__main__':
             ztest = zdist.sample((N_samples,))
             ztest=ztest.unsqueeze(1)
             ztest = model_graf_pro(ztest, text_promts_features[promt_idx].unsqueeze(0)).squeeze(1)
-            # print(ztest.shape)
-            # print(ztest.shape)
             # generate samples and run reconstruction
             for i, z_i in enumerate(ztest):
-                # outpath = os.path.join(image_dir, 'epoch_{:06d}_promt_{:02d}_object_{:04d}'.format(epoch,promt_idx,i))
-                # os.makedirs(outpath, exist_ok=True)
-
                 # create samples
                 z_i = z_i.reshape(1, -1).repeat(N_poses, 1)
-                # rgbs, _, _ = evaluator.create_samples(z_i.to(device))
                 rgbs=evaluator.create_samples(z_i.to(device))
                 rgbs = rgbs / 2 + 0.5
                 # print(rgbs.shape) N_poses*3*128*128
-
-                # for j, rgb in enumerate(rgbs):
                 rgb=rgbs[0]
                 if epoch%1000:
                     save_image(rgb.clone(), os.path.join(rec_dir, 'epoch_{:06d}_promt_{:02d}_object_{:04d}.png'.format(epoch, promt_idx,i)))
-
                 rgbs = preprocess(rgbs).to(device)
-
-                # sentences = ["a green car", "a blue car"]
-                # text = clip.tokenize(sentences).to(device)
-                # print(text_promts[epoch % len(text_promts)].unsqueeze(0).shape)
                 loss1, _ = model(rgbs, text_promts[promt_idx].unsqueeze(0))  # t()是浅复制
                 loss1 = loss1.mean()
                 loss1=-loss1
@@ -254,15 +222,4 @@ if __name__ == '__main__':
             generator_test.radius = radius_orig
         print(loss_print/cnt)
 
-        # run COLMAP for 3D reconstruction
-        # colmap_input_dir = os.path.join(image_dir, 'object_{:04d}'.format(i))
-        # colmap_output_dir = os.path.join(colmap_dir, 'object_{:04d}'.format(i))
-        # colmap_cmd = './external/colmap/run_colmap_automatic.sh {} {}'.format(colmap_input_dir, colmap_output_dir)
-        # print(colmap_cmd)
-        # os.system(colmap_cmd)
-        #
-        # # filter out white points
-        # filter_ply(colmap_output_dir)
-
-    # reset radius for generator
 
