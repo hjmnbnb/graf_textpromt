@@ -18,7 +18,7 @@ pip install .
 cd ../../../
 ```
 
-#安装CLIP,PyTorch版本需大于1.7.1
+#安装CLIP
 ```
 $ pip install ftfy regex tqdm
 $ pip install git+https://github.com/openai/CLIP.git
