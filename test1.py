@@ -19,8 +19,6 @@ import matplotlib
 from torchvision.transforms import Resize, Compose, Normalize
 matplotlib.use('Agg')
 
-# import ssl          # enable if downloading models gives CERTIFICATE_VERIFY_FAILED error
-# ssl._create_default_https_context = ssl._create_unverified_context
 
 import sys
 
@@ -145,7 +143,7 @@ if __name__ == '__main__':
     checkpoint_io.register_modules(**{k + '_test': v for k, v in generator_test.module_dict.items()})
 
     # Evaluator
-    evaluator = Evaluator(fid_kid, generator_test, zdist, ydist,
+    evaluator = Evaluator(False, generator_test, zdist, ydist,
                           batch_size=batch_size, device=device)
 
     # Train
@@ -177,6 +175,7 @@ if __name__ == '__main__':
 
     # output directories
     rec_dir = os.path.join(eval_dir, 'reconstruction')
+    os.mkdir(rec_dir)
     image_dir = os.path.join(rec_dir, 'images')
     colmap_dir = os.path.join(rec_dir, 'models')
 
