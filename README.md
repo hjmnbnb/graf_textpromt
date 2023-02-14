@@ -7,7 +7,7 @@ conda env create -f environment.yml
 conda activate graf
 ```
 #安装nerf依赖和torchsearchsorted
-7
+
 Next, for nerf-pytorch install torchsearchsorted. Note that this requires `torch>=1.7.1` and `CUDA >= v10.1`.
 You can install torchsearchsorted via
 ``` 
