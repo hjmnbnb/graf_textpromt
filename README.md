@@ -1,5 +1,5 @@
 # GRAF
-#创建环境
+#创建环境（pytorch >= 1.7.1，CUDA >= v10.1）
 
 You can create an anaconda environment called `graf` using
 ```
@@ -7,8 +7,8 @@ conda env create -f environment.yml
 conda activate graf
 ```
 #安装nerf依赖和torchsearchsorted
-
-Next, for nerf-pytorch install torchsearchsorted. Note that this requires `torch>=1.4.0` and `CUDA >= v10.1`.
+7
+Next, for nerf-pytorch install torchsearchsorted. Note that this requires `torch>=1.7.1` and `CUDA >= v10.1`.
 You can install torchsearchsorted via
 ``` 
 cd submodules/nerf_pytorch
