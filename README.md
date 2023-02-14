@@ -1,4 +1,4 @@
-# GRAF
+# GRAF_TEXTPROMT
 #创建环境（pytorch >= 1.7.1，CUDA >= v10.1）
 
 You can create an anaconda environment called `graf` using
