@@ -38,11 +38,13 @@ from submodules.GAN_stability.gan_training.config import (
 class graf_pro(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1=nn.Linear(512,256)
-        self.conv1=nn.Conv1d(1, 8, kernel_size=1)
-        self.conv2=nn.Conv1d(8,32,kernel_size=3,padding=1)
-        self.conv3=nn.Conv1d(32,1,kernel_size=3,padding=1)
-        self.conv4=nn.Conv1d(2,1,kernel_size=5,padding=2)
+        self.fc1=nn.Linear(512,1024)
+        self.fc_mu = nn.Linear(1024, 256)
+        self.fc_sigma = nn.Linear(1024, 256)
+        self.conv1=nn.Conv1d(1, 8, kernel_size=3,padding=1)
+        self.conv2=nn.Conv1d(8,64,kernel_size=3,padding=1)
+        self.conv3=nn.Conv1d(64,8,kernel_size=3,padding=1)
+        self.conv4=nn.Conv1d(8,1,kernel_size=3,padding=1)
         self.tanh=nn.Tanh()
     def forward(self, latent_z,promt_text):
         # print(latent_z.shape)#8,1,256
@@ -53,16 +55,15 @@ class graf_pro(nn.Module):
         y = self.tanh(y)
         y=self.conv3(y)
         y = self.tanh(y)
+        y = self.conv4(y)
+        y = self.tanh(y)
         y=self.fc1(y)
         y = self.tanh(y)
-        y=self.conv4(torch.cat([y.expand(latent_z.shape),latent_z],dim=1))
-        y=self.tanh(y)
-        # print(y.shape)#8,1,256
-        return y
-
-
-
-
+        mu=self.fc_mu(y)
+        sigma=self.fc_sigma(y)
+        new_z=latent_z*sigma
+        new_z=new_z+mu
+        return new_z
 
 
 from external.colmap.filter_points import filter_ply
@@ -175,7 +176,7 @@ if __name__ == '__main__':
 
     # output directories
     rec_dir = os.path.join(eval_dir, 'reconstruction')
-    os.mkdir(rec_dir)
+    os.makedirs(rec_dir,exist_ok=True)
     image_dir = os.path.join(rec_dir, 'images')
     colmap_dir = os.path.join(rec_dir, 'models')
 
@@ -205,7 +206,7 @@ if __name__ == '__main__':
                 rgbs = rgbs / 2 + 0.5
                 # print(rgbs.shape) N_poses*3*128*128
                 rgb=rgbs[0]
-                if epoch%1000:
+                if epoch%100:
                     save_image(rgb.clone(), os.path.join(rec_dir, 'epoch_{:06d}_promt_{:02d}_object_{:04d}.png'.format(epoch, promt_idx,i)))
                 rgbs = preprocess(rgbs).to(device)
                 loss1, _ = model(rgbs, text_promts[promt_idx].unsqueeze(0))  # t()是浅复制
