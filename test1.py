@@ -17,8 +17,8 @@ from torchvision.utils import save_image
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import matplotlib
 from torchvision.transforms import Resize, Compose, Normalize
-matplotlib.use('Agg')
 
+matplotlib.use('Agg')
 
 import sys
 
@@ -35,34 +35,36 @@ from submodules.GAN_stability.gan_training.config import (
     load_config,
 )
 
+
 class graf_pro(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1=nn.Linear(512,1024)
+        self.fc1 = nn.Linear(512, 1024)
         self.fc_mu = nn.Linear(1024, 256)
         self.fc_sigma = nn.Linear(1024, 256)
-        self.conv1=nn.Conv1d(1, 8, kernel_size=3,padding=1)
-        self.conv2=nn.Conv1d(8,64,kernel_size=3,padding=1)
-        self.conv3=nn.Conv1d(64,8,kernel_size=3,padding=1)
-        self.conv4=nn.Conv1d(8,1,kernel_size=3,padding=1)
-        self.tanh=nn.Tanh()
-    def forward(self, latent_z,promt_text):
+        self.conv1 = nn.Conv1d(1, 8, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv1d(8, 64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv1d(64, 8, kernel_size=3, padding=1)
+        self.conv4 = nn.Conv1d(8, 1, kernel_size=3, padding=1)
+        self.tanh = nn.Tanh()
+
+    def forward(self, latent_z, promt_text):
         # print(latent_z.shape)#8,1,256
         # print(promt_text.shape)#1,1,512
-        y=self.conv1(promt_text)
-        y=self.tanh(y)
-        y=self.conv2(y)
+        y = self.conv1(promt_text)
         y = self.tanh(y)
-        y=self.conv3(y)
+        y = self.conv2(y)
+        y = self.tanh(y)
+        y = self.conv3(y)
         y = self.tanh(y)
         y = self.conv4(y)
         y = self.tanh(y)
-        y=self.fc1(y)
+        y = self.fc1(y)
         y = self.tanh(y)
-        mu=self.fc_mu(y)
-        sigma=self.fc_sigma(y)
-        new_z=latent_z*sigma
-        new_z=new_z+mu
+        mu = self.fc_mu(y)
+        sigma = self.fc_sigma(y)
+        new_z = latent_z * sigma
+        new_z = new_z + mu
         return new_z
 
 
@@ -89,7 +91,6 @@ if __name__ == '__main__':
     checkpoint_dir = path.join(out_dir, 'chkpts')
     eval_dir = os.path.join(out_dir, 'eval')
     os.makedirs(eval_dir, exist_ok=True)
-
 
     # Logger
     checkpoint_io = CheckpointIO(
@@ -130,7 +131,6 @@ if __name__ == '__main__':
     config_pretrained = load_config('configs/pretrained_models.yaml', 'configs/pretrained_models.yaml')
     model_file = config_pretrained[config['data']['type']][config['data']['imsize']]
 
-
     # Distributions 获得符合概率分布的随机的y与z的采样函数
     ydist = get_ydist(1, device=device)  # Dummy to keep GAN training structure in tact
     y = torch.zeros(batch_size)  # Dummy to keep GAN training structure in tact
@@ -162,12 +162,11 @@ if __name__ == '__main__':
 
     model, preprocess = clip.load("ViT-B/32", device=device)
     model_graf_pro = graf_pro()
-    model_graf_pro=model_graf_pro.to(device)
+    model_graf_pro = model_graf_pro.to(device)
     optimizer = torch.optim.SGD(model_graf_pro.parameters(), lr=1e-3)
     text_promts = clip.tokenize(
-        ["a red car", "a blue car", "a green car", "a yellow car", "a purple car", "a pink car", "a white car" \
-                                                                                                 "a orange car",
-         "a gray car", "a black car"]).to(device)
+        ["a red car", "a blue car", "a green car", "a yellow car", "a purple car", "a pink car", "a white car",
+         "a orange car", "a gray car", "a black car"]).to(device)
 
     # sample from mean radius
     radius_orig = generator_test.radius
@@ -176,7 +175,7 @@ if __name__ == '__main__':
 
     # output directories
     rec_dir = os.path.join(eval_dir, 'reconstruction')
-    os.makedirs(rec_dir,exist_ok=True)
+    os.makedirs(rec_dir, exist_ok=True)
     image_dir = os.path.join(rec_dir, 'images')
     colmap_dir = os.path.join(rec_dir, 'models')
 
@@ -186,40 +185,42 @@ if __name__ == '__main__':
         Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
     ])
 
-    train_list=[i for i in range(len(text_promts))]
+    train_list = [i for i in range(len(text_promts))]
     for epoch in range(epochs):
         print("-----------start epoch {:07d}-----------".format(epoch))
         np.random.shuffle(train_list)
-        loss_print=0
-        cnt=0
+        loss_print = 0
+        cnt = 0
         for promt_idx in train_list:
-            text_promts_features = model.encode_text(text_promts).unsqueeze(1).float().to(device) #不能移出去，会影响backward
+            text_promts_features = model.encode_text(text_promts).unsqueeze(1).float().to(device)  # 不能移出去，会影响backward
             loss = 0
             ztest = zdist.sample((N_samples,))
-            ztest=ztest.unsqueeze(1)
+            ztest = ztest.unsqueeze(1)
             ztest = model_graf_pro(ztest, text_promts_features[promt_idx].unsqueeze(0)).squeeze(1)
             # generate samples and run reconstruction
             for i, z_i in enumerate(ztest):
                 # create samples
                 z_i = z_i.reshape(1, -1).repeat(N_poses, 1)
-                rgbs=evaluator.create_samples(z_i.to(device))
+                rgbs = evaluator.create_samples(z_i.to(device))
                 rgbs = rgbs / 2 + 0.5
                 # print(rgbs.shape) N_poses*3*128*128
-                rgb=rgbs[0]
-                if epoch%100==0:
-                    save_image(rgb.clone(), os.path.join(rec_dir, 'epoch_{:06d}_promt_{:02d}_object_{:04d}.png'.format(epoch, promt_idx,i)))
+
+                if epoch % 100 == 0:
+                    rgb = rgbs[0]
+                    save_image(rgb.clone(), os.path.join(rec_dir,
+                                                         'epoch_{:06d}_promt_{:02d}_object_{:04d}.png'.format(epoch,
+                                                                                                              promt_idx,
+                                                                                                              i)))
                 rgbs = preprocess(rgbs).to(device)
                 loss1, _ = model(rgbs, text_promts[promt_idx].unsqueeze(0))  # t()是浅复制
                 loss1 = loss1.mean()
-                loss1=-loss1
-                loss+=loss1
+                loss1 = -loss1
+                loss += loss1
                 with torch.no_grad():
-                    cnt+=1
-                    loss_print+=loss1
+                    cnt += 1
+                    loss_print += loss1
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             generator_test.radius = radius_orig
-        print(loss_print/cnt)
-
-
+        print(loss_print / cnt)
