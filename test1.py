@@ -206,7 +206,7 @@ if __name__ == '__main__':
                 rgbs = rgbs / 2 + 0.5
                 # print(rgbs.shape) N_poses*3*128*128
                 rgb=rgbs[0]
-                if epoch%100:
+                if epoch%100==0:
                     save_image(rgb.clone(), os.path.join(rec_dir, 'epoch_{:06d}_promt_{:02d}_object_{:04d}.png'.format(epoch, promt_idx,i)))
                 rgbs = preprocess(rgbs).to(device)
                 loss1, _ = model(rgbs, text_promts[promt_idx].unsqueeze(0))  # t()是浅复制
