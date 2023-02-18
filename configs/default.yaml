@@ -9,10 +9,13 @@ data:
   radius: 3.4                 # set according to near and far plane
   fov: 90.
   orthographic: False
-  umin: 0.                    # 0 deg, convert to degree via 360. * u  u是方位角，v是仰角
-  umax: 1.                    # 360 deg, convert to degree via 360. * u
-  vmin: 0.                    # 0 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
-  vmax: 0.45642212862617093   # 85 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+  umin: 0.88                  # 0 deg, convert to degree via 360. * u  u是方位角，v是仰角
+#  umax: 1.                    # 360 deg, convert to degree via 360. * u
+  umax: 0.88
+#  vmin: 0.                    # 0 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+#  vmax: 0.45642212862617093   # 85 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+  vmin: 0.11
+  vmax: 0.11
 nerf:
   i_embed: 0
   use_viewdirs: True

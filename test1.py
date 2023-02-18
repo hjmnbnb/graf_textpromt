@@ -40,29 +40,47 @@ class graf_pro(nn.Module):
     def __init__(self):
         super().__init__()
         self.fc1 = nn.Linear(512, 1024)
+        self.fc2=nn.Linear(1024,512)
+        self.fc3=nn.Linear(512,1024)
+        self.fc4 = nn.Linear(1024, 2048)
+        self.fc5=nn.Linear(2048, 1024)
         self.fc_mu = nn.Linear(1024, 256)
         self.fc_sigma = nn.Linear(1024, 256)
-        self.conv1 = nn.Conv1d(1, 8, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv1d(8, 64, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv1d(64, 8, kernel_size=3, padding=1)
-        self.conv4 = nn.Conv1d(8, 1, kernel_size=3, padding=1)
+        # self.conv1 = nn.Conv1d(1, 8, kernel_size=3, padding=1)
+        # self.conv2 = nn.Conv1d(8, 64, kernel_size=3, padding=1)
+        # self.conv3 = nn.Conv1d(64, 8, kernel_size=3, padding=1)
+        # self.conv4 = nn.Conv1d(8, 1, kernel_size=3, padding=1)
         self.tanh = nn.Tanh()
+        self.relu=nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, latent_z, promt_text):
         # print(latent_z.shape)#8,1,256
         # print(promt_text.shape)#1,1,512
-        y = self.conv1(promt_text)
-        y = self.tanh(y)
-        y = self.conv2(y)
-        y = self.tanh(y)
-        y = self.conv3(y)
-        y = self.tanh(y)
-        y = self.conv4(y)
-        y = self.tanh(y)
+        # y = self.conv1(promt_text)
+        # y = self.tanh(y)
+        # y = self.conv2(y)
+        # y = self.tanh(y)
+        # y = self.conv3(y)
+        # y = self.tanh(y)
+        # y = self.conv4(y)
+        # y = self.tanh(y)
+        y=promt_text
         y = self.fc1(y)
         y = self.tanh(y)
+        y = self.fc2(y)
+        y = self.tanh(y)
+        y = self.fc3(y)
+        y = self.tanh(y)
+        y = self.fc4(y)
+        y = self.fc5(y)
+        y = self.tanh(y)
+        y = self.tanh(y)
         mu = self.fc_mu(y)
-        sigma = self.fc_sigma(y)
+        # mu=self.tanh(mu)*10
+        # sigma = self.fc_sigma(y)
+        # sigma=self.sigmoid(sigma)*0
+        sigma=0
         new_z = latent_z * sigma
         new_z = new_z + mu
         return new_z
@@ -163,10 +181,12 @@ if __name__ == '__main__':
     model, preprocess = clip.load("ViT-B/32", device=device)
     model_graf_pro = graf_pro()
     model_graf_pro = model_graf_pro.to(device)
-    optimizer = torch.optim.SGD(model_graf_pro.parameters(), lr=1e-3)
+    optimizer = torch.optim.SGD(model_graf_pro.parameters(), lr=1e-5)
     text_promts = clip.tokenize(
-        ["a red car", "a blue car", "a green car", "a yellow car", "a purple car", "a pink car", "a white car",
-         "a orange car", "a gray car", "a black car"]).to(device)
+        ["a good photo of a red car", "a good photo of a blue car", "a good photo of a green car",
+         "a good photo of a yellow car", "a good photo of a purple car", "a good photo of a white car",
+         "a good photo of a orange car","a good photo of a gray car", "a good photo of a black car",
+         "a good photo of a brown car"]).to(device)
 
     # sample from mean radius
     radius_orig = generator_test.radius
