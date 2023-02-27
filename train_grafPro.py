@@ -35,6 +35,7 @@ from submodules.GAN_stability.gan_training.config import (
     load_config,
 )
 
+
 def save_all_net(net, net_name):
     """保存整个网络"""
     torch.save(net, net_name)
@@ -64,7 +65,7 @@ class graf_pro(nn.Module):
         # self.fc3=nn.Linear(512,1024)
         # self.fc4 = nn.Linear(1024, 2048)
         # self.fc5=nn.Linear(2048, 1024)
-        self.fc1=nn.Linear(512,512)
+        self.fc1 = nn.Linear(512, 512)
         self.fc2 = nn.Linear(512, 512)
         self.fc3 = nn.Linear(512, 512)
         self.fc4 = nn.Linear(512, 512)
@@ -73,9 +74,7 @@ class graf_pro(nn.Module):
         self.fc7 = nn.Linear(512, 512)
         self.fc8 = nn.Linear(512, 512)
 
-        self.attention=nn.Linear(512, 256)
-
-
+        self.attention = nn.Linear(512, 256)
 
         self.fc_mu = nn.Linear(512, 256)
         self.fc_sigma = nn.Linear(1024, 256)
@@ -84,7 +83,7 @@ class graf_pro(nn.Module):
         # self.conv3 = nn.Conv1d(64, 8, kernel_size=3, padding=1)
         # self.conv4 = nn.Conv1d(8, 1, kernel_size=3, padding=1)
         self.tanh = nn.Tanh()
-        self.relu=nn.ReLU()
+        self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, latent_z, promt_text):
@@ -98,8 +97,8 @@ class graf_pro(nn.Module):
         # y = self.tanh(y)
         # y = self.conv4(y)
         # y = self.tanh(y)
-        y=promt_text
-        mul=self.attention(y)
+        y = promt_text
+        mul = self.attention(y)
         y = self.fc1(y)
         y = self.tanh(y)
         y = self.fc2(y)
@@ -117,24 +116,24 @@ class graf_pro(nn.Module):
         y = self.fc8(y)
         y = self.tanh(y)
         # y = self.tanh(y)
-        mu = self.fc_mu(y)*mul
+        mu = self.fc_mu(y) * mul
         # mu=self.tanh(mu)*10
         # sigma = self.fc_sigma(y)
         # sigma=self.sigmoid(sigma)*0
-        sigma=0
+        sigma = 0
         new_z = latent_z * sigma
         new_z = new_z + mu
         return new_z
 
-class mutil_plane(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.codebook=torch.nn.Parameter(torch.randn(40, 40,512, requires_grad=True) * 0.01)
-        self.x_axis=nn.Linear(512,512)
-        self.y_axis=nn.Linear(512,512)
-    def forward(self,latent_z, promt_text):
-        
 
+# class mutil_plane(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.codebook = torch.nn.Parameter(torch.randn(40, 40, 512, requires_grad=True) * 0.01)
+#         self.x_axis = nn.Linear(512, 512)
+#         self.y_axis = nn.Linear(512, 512)
+#
+#     def forward(self, latent_z, promt_text):
 
 
 from external.colmap.filter_points import filter_ply
@@ -232,9 +231,10 @@ if __name__ == '__main__':
     model, preprocess = clip.load("ViT-B/32", device=device)
     model_graf_pro = graf_pro()
     model_graf_pro = model_graf_pro.to(device)
-    optimizer = torch.optim.SGD(model_graf_pro.parameters(), lr=1e-5)
+    optimizer = torch.optim.Adam(model_graf_pro.parameters(), lr=5e-5)
     text_promts = clip.tokenize(
-        ["a good photo of a red car", "a good photo of a yellow car","a good photo of a blue car", "a good photo of a green car",
+        ["a good photo of a red car", "a good photo of a yellow car", "a good photo of a blue car",
+         "a good photo of a green car",
          "a good photo of a orange car", "a good photo of a purple car", "a good photo of a white car",
          "a good photo of a black car", "a good photo of a gray car",
          "a good photo of a brown car"]).to(device)
@@ -261,10 +261,11 @@ if __name__ == '__main__':
         print("-----------start epoch {:07d}-----------".format(epoch))
         np.random.shuffle(train_list)
         loss_print = 0
-        loss_min=0
+        loss_min = 0
         cnt = 0
         for promt_idx in train_list:
-            text_promts_features = model.encode_text(text_promts[promt_idx]).unsqueeze(1).float().to(device)  # 不能移出去，会影响backward
+            text_promts_features = model.encode_text(text_promts[promt_idx].unsqueeze(0)).unsqueeze(1).float().to(
+                device)  # 不能移出去，会影响backward
             text_promts_features = text_promts_features / text_promts_features.norm(dim=1, keepdim=True)
             loss = 0
             ztest = zdist.sample((N_samples,))
@@ -298,8 +299,8 @@ if __name__ == '__main__':
             generator_test.radius = radius_orig
         loss_print /= cnt
         print(loss_print)
-        if loss_min>loss_print:
-            save_all_net(model_graf_pro,'model_graf_pro_best.pkl')
-            loss_min=loss_print
-        if epoch%10==0:
-            save_all_net(model_graf_pro,'model_graf_pro_last.pkl')
+        if loss_min > loss_print:
+            save_all_net(model_graf_pro, 'model_graf_pro_best.pkl')
+            loss_min = loss_print
+        if epoch % 10 == 0:
+            save_all_net(model_graf_pro, 'model_graf_pro_last.pkl')
