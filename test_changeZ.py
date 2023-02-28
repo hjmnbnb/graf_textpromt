@@ -140,10 +140,15 @@ if __name__ == '__main__':
 
     if True:
         with torch.no_grad():
-            N_samples = 8
-            N_poses = 5  # corresponds to number of frames
-            ztest = zdist.sample((N_samples,))
+            N_samples = 256
+            N_poses = 1  # corresponds to number of frames
+            ztest = zdist.sample((N_samples,))#8 ,256     N_samples,256
             print(ztest.shape)
+            print(type(ztest))
+            for i in range(1,N_samples):
+                tmp=ztest[0]
+                tmp[i]+=2
+                ztest[i]=tmp
 
             # sample from mean radius
             radius_orig = generator_test.radius
@@ -154,18 +159,18 @@ if __name__ == '__main__':
             rec_dir = os.path.join(eval_dir, 'reconstruction')
             image_dir = os.path.join(rec_dir, 'images')
             colmap_dir = os.path.join(rec_dir, 'models')
-
+            os.makedirs(rec_dir, exist_ok=True)
             # generate samples and run reconstruction
             for i, z_i in enumerate(ztest):
-                outpath = os.path.join(image_dir, 'object_{:04d}'.format(i))
-                os.makedirs(outpath, exist_ok=True)
+                # outpath = os.path.join(image_dir, 'object_{:04d}'.format(i))
+                # os.makedirs(outpath, exist_ok=True)
 
                 # create samples
                 z_i = z_i.reshape(1, -1).repeat(N_poses, 1)
-                rgbs, _, _ = evaluator.create_samples(z_i.to(device))
+                rgbs = evaluator.create_samples(z_i.to(device))
                 rgbs = rgbs / 2 + 0.5
                 for j, rgb in enumerate(rgbs):
-                    save_image(rgb.clone(), os.path.join(outpath, '{:04d}.png'.format(j)))
+                    save_image(rgb.clone(), os.path.join(rec_dir, 'object_{:04d}_{:04d}.png'.format(i,j)))
 
                 # run COLMAP for 3D reconstruction
                 colmap_input_dir = os.path.join(image_dir, 'object_{:04d}'.format(i))
