@@ -109,11 +109,9 @@ if __name__ == '__main__':
     )
 
     # Get model file
-    if args.pretrained:
+    if True:
         config_pretrained = load_config('configs/pretrained_models.yaml', 'configs/pretrained_models.yaml')
         model_file = config_pretrained[config['data']['type']][config['data']['imsize']]
-    else:
-        model_file = 'model_best.pt'
 
     # Distributions 获得符合概率分布的随机的y与z的
     ydist = get_ydist(1, device=device)  # Dummy to keep GAN training structure in tact
