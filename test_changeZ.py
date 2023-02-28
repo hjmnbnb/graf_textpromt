@@ -139,7 +139,7 @@ if __name__ == '__main__':
     epoch_idx = load_dict.get('epoch_idx', -1)
 
     if True:
-        with torch.nn.no_grad():
+        with torch.no_grad():
             N_samples = 8
             N_poses = 5  # corresponds to number of frames
             ztest = zdist.sample((N_samples,))
