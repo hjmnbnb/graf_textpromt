@@ -126,14 +126,30 @@ class graf_pro(nn.Module):
         return new_z
 
 
-# class mutil_plane(nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#         self.codebook = torch.nn.Parameter(torch.randn(40, 40, 512, requires_grad=True) * 0.01)
-#         self.x_axis = nn.Linear(512, 512)
-#         self.y_axis = nn.Linear(512, 512)
-#
-#     def forward(self, latent_z, promt_text):
+class mutil_plane(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.codebook = torch.nn.Parameter(torch.randn(40, 40, 512, requires_grad=True) * 0.01)
+        self.x_axis = nn.Linear(512, 512)
+        self.y_axis = nn.Linear(512, 512)
+        self.tanh=nn.Tanh()
+
+    def forward(self, latent_z, promt_text):
+        x=self.x_axis(promt_text)
+        y=self.y_axis(promt_text)
+        x=self.tanh(x)
+        y=self.tanh(y)
+        x=(x+1)*20
+        y=(y+1)*20
+
+        x_low=torch.trunc(x)
+        x_high=x_low+1
+        x_decimal = x_high-x
+        y_low=torch.trunc(y)
+        y_decimal=torch.fract(y)
+        y_high=y_low+1
+
+
 
 
 from external.colmap.filter_points import filter_ply
@@ -146,6 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('config', type=str, help='Path to config file.')
 
     args, unknown = parser.parse_known_args()
+    # args.config ='configs/carla.yaml'
     config = load_config(args.config, 'configs/default.yaml')
     config['data']['fov'] = float(config['data']['fov'])
     config = update_config(config, unknown)
