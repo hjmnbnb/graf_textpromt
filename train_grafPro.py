@@ -249,6 +249,7 @@ if __name__ == '__main__':
     model_graf_pro = graf_pro()
     model_graf_pro = model_graf_pro.to(device)
     optimizer = torch.optim.Adam(model_graf_pro.parameters(), lr=5e-5)
+    optimizer_graf=torch.optim.Adam(generator_test.parameters(), lr=1e-5)
     text_promts = clip.tokenize(
         ["a good photo of a red car", "a good photo of a yellow car", "a good photo of a blue car",
          "a good photo of a green car",
@@ -311,13 +312,17 @@ if __name__ == '__main__':
                     cnt += 1
                     loss_print += loss1
             optimizer.zero_grad()
+            optimizer_graf.zero_grad()
             loss.backward()
             optimizer.step()
+            optimizer_graf.step()
             generator_test.radius = radius_orig
         loss_print /= cnt
         print(loss_print)
         if loss_min > loss_print:
             save_all_net(model_graf_pro, 'model_graf_pro_best.pkl')
+            save_all_net(generator_test,'generator_test_best.pkl')
             loss_min = loss_print
-        if epoch % 10 == 0:
+        if epoch % 200 == 0:
             save_all_net(model_graf_pro, 'model_graf_pro_last.pkl')
+            save_all_net(generator_test, 'generator_test_last.pkl')
