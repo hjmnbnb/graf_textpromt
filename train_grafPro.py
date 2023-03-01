@@ -321,8 +321,8 @@ if __name__ == '__main__':
         print(loss_print)
         if loss_min > loss_print:
             save_all_net(model_graf_pro, 'model_graf_pro_best.pkl')
-            save_all_net(generator_test,'generator_test_best.pkl')
+            # save_all_net(generator_test,'generator_test_best.pkl')
             loss_min = loss_print
         if epoch % 200 == 0:
             save_all_net(model_graf_pro, 'model_graf_pro_last.pkl')
-            save_all_net(generator_test, 'generator_test_last.pkl')
+            # save_all_net(generator_test, 'generator_test_last.pkl')
