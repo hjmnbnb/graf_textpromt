@@ -38,10 +38,12 @@ def make_grid(ims, pil=True, resize=True):
 def make_image_val_data(G, clip_model, n_im_val_samples, device, latent_dim=512):
     clip_features = []
 
-    zs = torch.randn((n_im_val_samples, latent_dim), device=device)
-    ws = G.mapping(zs, c=None)
-    for w in tqdm(ws):
-        out = G.synthesis(w.unsqueeze(0))
+    # zs = torch.randn((n_im_val_samples, latent_dim), device=device)
+    zs=G.zdist.sample((n_im_val_samples,)).to(device)
+    # ws = G.mapping(zs, c=None)
+    for this_w in tqdm(zs):
+        # out = G.synthesis(w.unsqueeze(0))
+        out = G.create_samples(this_w.to(device)).to(device)
         image_features = clip_model.embed_image(out)
         clip_features.append(image_features)
 
@@ -49,7 +51,7 @@ def make_image_val_data(G, clip_model, n_im_val_samples, device, latent_dim=512)
     val_data = {
         "clip_features": clip_features,
         "z": zs,
-        "w": ws,
+        # "w": ws,
     }
     return val_data
 
@@ -74,7 +76,7 @@ def compute_val(diffusion, input_embed, G, clip_model, device, cond_scale=1.0, b
     pred_w_clip_features = []
     # batch in 1s to not worry about memory
     for w in out.chunk(bs):
-        out = G.synthesis(w)
+        out = G.create_samples(w.to(device))
         images.append(out)
         image_features = clip_model.embed_image(out)
         pred_w_clip_features.append(image_features)

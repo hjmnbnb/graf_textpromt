@@ -37,7 +37,7 @@ def load_remote_cfg(cfg):
     return OmegaConf.load(f)
 
 class Clipper(torch.nn.Module):
-    def __init__(self, clip_variant,device):
+    def __init__(self, clip_variant,device:str='cuda'):
         super().__init__()
         clip_model, _ = clip.load(clip_variant, device=device)
         self.clip = clip_model
