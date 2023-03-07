@@ -13,12 +13,13 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
 import typer
 from joblib import Parallel, delayed
 from PIL import Image
 from tqdm import tqdm
 import torch.nn.functional as F
-
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 from clip2latent.models import Clipper, load_sg
 
 import multiprocessing as mp
@@ -133,7 +134,8 @@ def run_folder_list(
     # G = generators[generator_name]().to(device).eval()
 
     typer.echo("Loading feature extractor")
-    feature_extractor = Clipper(feature_extractor_name).to(device)
+    feature_extractor = Clipper(feature_extractor_name,device).to(device)
+    feature_extractor.clip.to(device)
 
     typer.echo("Generating samples")
     typer.echo(f"using space {space}")
@@ -167,17 +169,18 @@ def run_folder_list(
                     latents = this_w[:, select_idxs, :].cpu().numpy()
                 with torch.no_grad():
 
-                    out = evaluator.create_samples(this_w.to(device))
-                    out = out / 2 + 0.5
+                    out = evaluator.create_samples(this_w.to(device)).to(device)
+                    # out = out / 2 + 0.5
                     out = F.interpolate(out, (out_image_size, out_image_size), mode="area")
-
+                # print(out.device)
                 image_features = feature_extractor.embed_image(out)
                 image_features = image_features.cpu().numpy()
 
                 if save_im:
-                    pass
-                    # out = out.permute(0,2,3,1).clamp(-1,1)
-                    # out = (255*(out*0.5 + 0.5).cpu().numpy()).astype(np.uint8)
+                    print(out.shape)
+                    out = out.permute(0,2,3,1).clamp(-1,1)
+                    # out=out.cpu().numpy()
+                    out = (255*(out/2+0.5).cpu().numpy()).astype(np.uint8)
                 else:
                     out = [None] * len(latents)
                 parallel(
@@ -219,9 +222,9 @@ def main(
         generator_name: str = "sg2-ffhq-1024",  # Key into `generators` dict`
         feature_extractor_name: str = "ViT-B/32",
         n_gpus: int = 1,
-        out_image_size: int = 256,
-        batch_size: int = 8,
-        n_save_workers: int = 1,
+        out_image_size: int = 128,
+        batch_size: int = 4,
+        n_save_workers: int = 4,
         space: str = "w",
         samples_per_folder: int = 10_000,
         save_im: bool = False,  # Save the generated images?
