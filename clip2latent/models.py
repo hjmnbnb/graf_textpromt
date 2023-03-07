@@ -37,9 +37,9 @@ def load_remote_cfg(cfg):
     return OmegaConf.load(f)
 
 class Clipper(torch.nn.Module):
-    def __init__(self, clip_variant):
+    def __init__(self, clip_variant,device):
         super().__init__()
-        clip_model, _ = clip.load(clip_variant, device="cpu")
+        clip_model, _ = clip.load(clip_variant, device=device)
         self.clip = clip_model
         self.normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
         self.clip_size = (224,224)
