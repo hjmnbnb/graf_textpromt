@@ -44,6 +44,60 @@ generators = {
 }
 
 
+def load_graf_evaluater(
+        cfg: str = 'configs/carla.yaml',
+        batch_size: int = 8,
+        pretrained: bool = True,
+        device:str='cuda'):
+    config = load_config(cfg, 'configs/default.yaml')
+    config['data']['fov'] = float(config['data']['fov'])
+    outdir = os.path.join(config['training']['outdir'], config['expname'])
+    train_dataset, hwfr, render_poses = get_data(config)  # hwfr is [H,W,dset.focal,dset.radius]
+    if config['data']['orthographic']:
+        hw_ortho = (config['data']['far'] - config['data']['near'], config['data']['far'] - config['data']['near'])
+        hwfr[2] = hw_ortho
+    config['data']['hwfr'] = hwfr  # add for building generator
+    checkpoint_dir = os.path.join(outdir, 'chkpts')
+    eval_dir = os.path.join(outdir, 'eval')
+    os.makedirs(eval_dir, exist_ok=True)
+    config['training']['nworkers'] = 0
+    checkpoint_io = CheckpointIO(
+        checkpoint_dir=checkpoint_dir
+    )
+    generator, _ = build_models(config, disc=False)
+    generator = generator.to(device)
+    img_to_patch = ImgToPatch(generator.ray_sampler, hwfr[:3])
+    checkpoint_io.register_modules(
+        **generator.module_dict  # treat NeRF specially
+    )
+    if pretrained:
+        config_pretrained = load_config('configs/pretrained_models.yaml', 'configs/pretrained_models.yaml')
+        model_file = config_pretrained[config['data']['type']][config['data']['imsize']]
+
+    # Distributions 获得符合概率分布的随机的y与z的
+    ydist = get_ydist(1, device=device)  # Dummy to keep GAN training structure in tact
+    y = torch.zeros(batch_size)  # Dummy to keep GAN training structure in tact
+    zdist = get_zdist(config['z_dist']['type'], config['z_dist']['dim'],
+                      device=device)
+
+    # Test generator, use model average
+    generator_test = copy.deepcopy(generator)
+    generator_test.parameters = lambda: generator_test._parameters
+    generator_test.named_parameters = lambda: generator_test._named_parameters
+    checkpoint_io.register_modules(**{k + '_test': v for k, v in generator_test.module_dict.items()})
+    generator_test = generator_test.to(device)
+    # Evaluator 即为后面用到的生成器
+    evaluator = Evaluator(False, generator_test, zdist, ydist,
+                          batch_size=batch_size, device=device)
+
+    # Load checkpoint
+    print('load %s' % os.path.join(checkpoint_dir, model_file))
+    load_dict = checkpoint_io.load(model_file)
+    it = load_dict.get('it', -1)
+    epoch_idx = load_dict.get('epoch_idx', -1)
+
+    return evaluator
+
 def mix_styles(w_batch, space):
     """Defines a style mixing procedure"""
     space_spec = {
@@ -80,56 +134,10 @@ def run_folder_list(
     typer.echo("Loading generator")
 
     # load graf
-    config = load_config('configs/carla.yaml', 'configs/default.yaml')
-    config['data']['fov'] = float(config['data']['fov'])
-    outdir = os.path.join(config['training']['outdir'], config['expname'])
-    train_dataset, hwfr, render_poses = get_data(config)  # hwfr is [H,W,dset.focal,dset.radius]
-    if config['data']['orthographic']:
-        hw_ortho = (config['data']['far'] - config['data']['near'], config['data']['far'] - config['data']['near'])
-        hwfr[2] = hw_ortho
-    config['data']['hwfr'] = hwfr  # add for building generator
-    checkpoint_dir = os.path.join(outdir, 'chkpts')
-    eval_dir = os.path.join(outdir, 'eval')
-    os.makedirs(eval_dir, exist_ok=True)
-    config['training']['nworkers'] = 0
-    checkpoint_io = CheckpointIO(
-        checkpoint_dir=checkpoint_dir
-    )
-    generator, _ = build_models(config, disc=False)
-    generator = generator.to(device)
-    img_to_patch = ImgToPatch(generator.ray_sampler, hwfr[:3])
-    checkpoint_io.register_modules(
-        **generator.module_dict  # treat NeRF specially
-    )
 
-    config_pretrained = load_config('configs/pretrained_models.yaml', 'configs/pretrained_models.yaml')
-    model_file = config_pretrained[config['data']['type']][config['data']['imsize']]
-
-    # Distributions 获得符合概率分布的随机的y与z的
-    ydist = get_ydist(1, device=device)  # Dummy to keep GAN training structure in tact
-    y = torch.zeros(batch_size)  # Dummy to keep GAN training structure in tact
-    zdist = get_zdist(config['z_dist']['type'], config['z_dist']['dim'],
-                      device=device)
-
-    # Test generator, use model average
-    generator_test = copy.deepcopy(generator)
-    generator_test.parameters = lambda: generator_test._parameters
-    generator_test.named_parameters = lambda: generator_test._named_parameters
-    checkpoint_io.register_modules(**{k + '_test': v for k, v in generator_test.module_dict.items()})
-    generator_test=generator_test.to(device)
-    # Evaluator 即为后面用到的生成器
-    evaluator = Evaluator(False, generator_test, zdist, ydist,
-                          batch_size=batch_size, device=device)
-
-    # Load checkpoint
-    print('load %s' % os.path.join(checkpoint_dir, model_file))
-    load_dict = checkpoint_io.load(model_file)
-    it = load_dict.get('it', -1)
-    epoch_idx = load_dict.get('epoch_idx', -1)
-
-    # return zdist, evaluator
-    #
-    # zdist, evaluator = load_graf()
+    evaluator = load_graf_evaluater(batch_size=batch_size,device=device)
+    generator_test=evaluator.generator
+    zdist=evaluator.zdist
 
     # G = generators[generator_name]().to(device).eval()
 
