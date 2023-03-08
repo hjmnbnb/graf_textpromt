@@ -1,6 +1,6 @@
 defaults:
   - model: mid
-  - data: sg2-ffhq
+  - data: car-data
 
 logging: wandb
 wandb_project: clip2latent

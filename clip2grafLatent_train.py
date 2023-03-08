@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from omegaconf import OmegaConf
 from tqdm.auto import tqdm
-
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 import wandb
 from clip2latent.data import load_data
 from clip2latent.models import load_models
@@ -35,8 +35,7 @@ def load_graf_evaluater(
         batch_size: int = 8,
         pretrained: bool = True,
         device:str='cuda'):
-    print("aaaa")
-    print(os.path)
+    # print("aaaa")
     config = load_config(cfg, '../../../configs/default.yaml')
     config['data']['fov'] = float(config['data']['fov'])
     outdir = os.path.join(config['training']['outdir'], config['expname'])
@@ -191,7 +190,7 @@ def train(trainer, loader, device, val_it, validate, save_checkpoint, max_it, pr
 
 @hydra.main(config_path="config", config_name="car")
 def main(cfg):
-
+    # print(os.path)
     if cfg.logging == "wandb":
         wandb.init(
             project=cfg.wandb_project,
@@ -205,7 +204,7 @@ def main(cfg):
         logger.info("Not logging")
     else:
         raise NotImplementedError(f"Logging type {cfg.logging} not implemented")
-
+    # print(os.path)
     device = cfg.device
     stats, loader = load_data(cfg.data) #stats包含w的方差、均值信息，loader取w，Ei对
     _, clip_model, trainer = load_models(cfg, device, stats)#trainer是DiffusionPriorTrainer
