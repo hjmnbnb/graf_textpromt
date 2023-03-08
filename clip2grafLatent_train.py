@@ -1,8 +1,11 @@
+import copy
 import logging
+import os
+import sys
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-
+sys.path.append('submodules')
 import hydra
 import numpy as np
 import torch
@@ -14,11 +17,74 @@ from clip2latent.data import load_data
 from clip2latent.models import load_models
 from clip2latent.train_utils import (compute_val, make_grid,
                                      make_image_val_data, make_text_val_data)
-from generate_graf_dataset import load_graf_evaluater
+from graf.config import get_data
+from graf.config import update_config, build_models, get_data
+from graf.gan_training import Evaluator
+from graf.transforms import ImgToPatch
+from submodules.GAN_stability.gan_training.checkpoints import CheckpointIO
+from submodules.GAN_stability.gan_training.config import load_config
+from submodules.GAN_stability.gan_training.distributions import get_ydist, get_zdist
+# from generate_graf_dataset import load_graf_evaluater
 
 logger = logging.getLogger(__name__)
 noop = lambda *args, **kwargs: None
 logfun = noop
+
+def load_graf_evaluater(
+        cfg: str = '../../../configs/carla.yaml',
+        batch_size: int = 8,
+        pretrained: bool = True,
+        device:str='cuda'):
+    print("aaaa")
+    print(os.path)
+    config = load_config(cfg, '../../../configs/default.yaml')
+    config['data']['fov'] = float(config['data']['fov'])
+    outdir = os.path.join(config['training']['outdir'], config['expname'])
+    train_dataset, hwfr, render_poses = get_data(config)  # hwfr is [H,W,dset.focal,dset.radius]
+    if config['data']['orthographic']:
+        hw_ortho = (config['data']['far'] - config['data']['near'], config['data']['far'] - config['data']['near'])
+        hwfr[2] = hw_ortho
+    config['data']['hwfr'] = hwfr  # add for building generator
+    checkpoint_dir = os.path.join(outdir, 'chkpts')
+    eval_dir = os.path.join(outdir, 'eval')
+    os.makedirs(eval_dir, exist_ok=True)
+    config['training']['nworkers'] = 0
+    checkpoint_io = CheckpointIO(
+        checkpoint_dir=checkpoint_dir
+    )
+    generator, _ = build_models(config, disc=False)
+    generator = generator.to(device)
+    img_to_patch = ImgToPatch(generator.ray_sampler, hwfr[:3])
+    checkpoint_io.register_modules(
+        **generator.module_dict  # treat NeRF specially
+    )
+    if pretrained:
+        config_pretrained = load_config('../../../configs/pretrained_models.yaml', '../../../configs/pretrained_models.yaml')
+        model_file = config_pretrained[config['data']['type']][config['data']['imsize']]
+
+    # Distributions 获得符合概率分布的随机的y与z的
+    ydist = get_ydist(1, device=device)  # Dummy to keep GAN training structure in tact
+    y = torch.zeros(batch_size)  # Dummy to keep GAN training structure in tact
+    zdist = get_zdist(config['z_dist']['type'], config['z_dist']['dim'],
+                      device=device)
+
+    # Test generator, use model average
+    generator_test = copy.deepcopy(generator)
+    generator_test.parameters = lambda: generator_test._parameters
+    generator_test.named_parameters = lambda: generator_test._named_parameters
+    checkpoint_io.register_modules(**{k + '_test': v for k, v in generator_test.module_dict.items()})
+    generator_test = generator_test.to(device)
+    # Evaluator 即为后面用到的生成器
+    evaluator = Evaluator(False, generator_test, zdist, ydist,
+                          batch_size=batch_size, device=device)
+
+    # Load checkpoint
+    print('load %s' % os.path.join(checkpoint_dir, model_file))
+    load_dict = checkpoint_io.load(model_file)
+    it = load_dict.get('it', -1)
+    epoch_idx = load_dict.get('epoch_idx', -1)
+
+    return evaluator
 
 class Checkpointer():
     """A small class to take care of saving checkpoints"""
@@ -123,7 +189,7 @@ def train(trainer, loader, device, val_it, validate, save_checkpoint, max_it, pr
 
 
 
-@hydra.main(config_path="../config", config_name="config")
+@hydra.main(config_path="config", config_name="car")
 def main(cfg):
 
     if cfg.logging == "wandb":
