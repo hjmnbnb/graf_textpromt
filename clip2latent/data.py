@@ -18,7 +18,7 @@ def add_noise(x, scale=0.75):
     x *= orig_norm
     return x
 
-def load_data(cfg, n_stats=10_000, shuffle=5000, n_workers=16):
+def load_data(cfg, n_stats=10_000, shuffle=5000, n_workers=0):
     """Create train and validation data from a config"""
 
     if cfg.format != "webdataset":

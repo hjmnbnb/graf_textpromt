@@ -32,8 +32,8 @@ nerf:
   decrease_noise: True
 z_dist:
   type: gauss
-  dim: 256
-  dim_appearance: 128         # This dimension is subtracted from "dim"
+  dim: 256 #总体dim
+  dim_appearance: 128         # This dimension is subtracted from "dim" 与颜色相关的dim
 ray_sampler:
   min_scale: 0.25
   max_scale: 1.
@@ -47,7 +47,7 @@ training:
   model_file: model.pt
   monitoring: tensorboard
   use_amp: False               # Use automated mixed precision
-  nworkers: 12
+  nworkers: 4
   batch_size: 1
   chunk: 32768                # 1024*32
   netchunk: 65536             # 1024*64

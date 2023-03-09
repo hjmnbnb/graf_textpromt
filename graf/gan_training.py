@@ -1,8 +1,10 @@
+import sys
+
 import torch
 import numpy as np
 import os
 from tqdm import tqdm
-
+sys.path.append('../submodules')
 from submodules.GAN_stability.gan_training.train import toggle_grad, Trainer as TrainerBase
 from submodules.GAN_stability.gan_training.eval import Evaluator as EvaluatorBase
 from submodules.GAN_stability.gan_training.metrics import FIDEvaluator, KIDEvaluator
@@ -86,17 +88,17 @@ class Evaluator(EvaluatorBase):
             reshape = lambda x: x.view(bs, self.generator.H, self.generator.W, x.shape[1]).permute(0, 3, 1,
                                                                                                    2)  # (NxHxW)xC -> NxCxHxW
             rgb.append(reshape(rgb_i).cpu())
-            # disp.append(reshape(disp_i).cpu())
-            # acc.append(reshape(acc_i).cpu())
+            disp.append(reshape(disp_i).cpu())
+            acc.append(reshape(acc_i).cpu())
 
         rgb = torch.cat(rgb)
-        # disp = torch.cat(disp)
-        # acc = torch.cat(acc)
+        disp = torch.cat(disp)
+        acc = torch.cat(acc)
 
-        # depth = self.disp_to_cdepth(disp)
+        depth = self.disp_to_cdepth(disp)
 
-        # return rgb, depth, acc
-        return rgb
+        return rgb, depth, acc
+        # return rgb
 
     def make_video(self, basename, z, poses, as_gif=True):
         """ Generate images and save them as video.

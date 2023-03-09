@@ -37,7 +37,8 @@ class LatentPrior(DiffusionPrior):
     We could either use a 9,216 dim latent and reshape it, or have 18x512 tokens for the transformer
     as a first try we'll use 18 tokens.
 
-    latent repeates dictates how the latents should repeat for output, e.g working in a coarse, mid, fine
+    latent repeates dictates how the latents should rep
+    eat for output, e.g working in a coarse, mid, fine
     representation (w3) we migth have repeats of (4, 4, 10)
     """
 

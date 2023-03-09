@@ -1,0 +1,17 @@
+expname: carla_128_retrain
+data:
+  imsize: 128
+  datadir: data/carla
+  type: carla
+  radius: 10.
+  near: 7.5
+  far: 12.5
+  fov: 30.0
+  umin: 0                 # 0 deg, convert to degree via 360. * u  u是方位角，v是仰角
+  umax: 1.                    # 360 deg, convert to degree via 360. * u
+  vmin: 0.                    # 0 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+  vmax: 0.45642212862617093   # 85 deg, convert to degrees via arccos(1 - 2 * v) * 180. / pi
+z_dist:
+  type: gauss
+  dim: 512 #总体dim
+  dim_appearance: 256         # This dimension is subtracted from "dim" 与颜色相关的dim

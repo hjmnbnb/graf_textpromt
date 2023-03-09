@@ -51,7 +51,7 @@ def make_image_val_data(G, clip_model, n_im_val_samples, device, latent_dim=512)
         # print(this_w.shape)
         this_w = this_w.unsqueeze(0)
         # print(this_w.shape)
-        out = G.create_samples(this_w.to(device)).to(device)
+        out,_,_ = G.create_samples(this_w.to(device)).to(device)
         image_features = clip_model.embed_image(out)
         clip_features.append(image_features)
 
@@ -86,7 +86,7 @@ def compute_val(diffusion, input_embed, G, clip_model, device, cond_scale=1.0, b
     for w in out.chunk(bs):
         print(w.shape)
         # w=w.unsqueeze(1)
-        out = G.create_samples(w.unsqueeze(0).to(device))
+        out,_,_ = G.create_samples(w.unsqueeze(0).to(device))
         images.append(out)
         image_features = clip_model.embed_image(out)
         pred_w_clip_features.append(image_features)
