@@ -1,10 +1,10 @@
-## A project to turn an unconditional Graf into a conditional controllable graf
+# A project to turn an unconditional Graf into a conditional controllable graf
 condition <br>
 ![image](https://github.com/user-attachments/assets/d66cd589-2809-440b-90cc-0fe95c3f25aa)  <br>
 result <br>
 ![image](https://github.com/user-attachments/assets/c9a51a9f-dad1-49f6-b0c2-08a9a09884d2) <br>
 
-# text to 3d <br>
+## text to 3d <br>
 a-photograph-of-a-photograph-of-a-young-man-with-a-beard <br>
 ![image](https://github.com/user-attachments/assets/ae6ec5c7-4155-4ed8-8acb-773339cf12b4) <br>
 a-photograph-of-a-happy-woman-with-glasses <br> 
